@@ -1,0 +1,15 @@
+{
+  "name": "lopsin-agent",
+  "version": "1.4.2",
+  "private": true,
+  "type": "module",
+  "description": "Lopsin zero-data-access collector. Reports configuration and telemetry scalars over outbound HTTPS only.",
+  "main": "agent.js",
+  "scripts": {
+    "start": "node agent.js",
+    "once": "node agent.js --once",
+    "dry-run": "node agent.js --dry-run",
+    "demo-violation": "node agent.js --once --demo-violation"
+  },
+  "engines": { "node": ">=20" }
+}

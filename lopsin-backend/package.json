@@ -1,0 +1,25 @@
+{
+  "name": "lopsin-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Lopsin - Legal, Operational & Policy Standards Intelligence Network. Zero-data-access compliance automation API.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "seed": "node src/db/seed.js",
+    "reset": "node src/db/seed.js --force",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  },
+  "optionalDependencies": {
+    "mongodb": "^6.12.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
