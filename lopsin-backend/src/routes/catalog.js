@@ -9,8 +9,13 @@ import { recordAudit } from '../utils/audit.js'
 
 const router = Router()
 
-/** Public surface used by the marketing site - no authentication, no tenant data. */
+/**
+ * Public surface used by the marketing site - no authentication, no tenant
+ * data, identical for every visitor. Safe to serve from Vercel's edge cache
+ * instead of invoking the function (and a database round-trip) per request.
+ */
 router.get('/public/overview', (_req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=3600')
   res.json({
     frameworks: frameworkDocuments().map(({ controls, ...rest }) => rest),
     totalFrameworks: FRAMEWORKS.length,
@@ -23,6 +28,7 @@ router.get('/public/overview', (_req, res) => {
 
 /** The published signal contract - what an agent is permitted to send. */
 router.get('/public/signal-contract', (_req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=3600')
   res.json({ signals: SIGNAL_CATALOG, guardRules: GUARD_RULES })
 })
 

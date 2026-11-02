@@ -13,24 +13,39 @@ axiosClient.interceptors.request.use((config) => {
 })
 
 // Re-visiting a page (switching tabs in the console, going back) re-fetches
-// from the backend by default, which is slow on a free-tier host. Cache GET
-// responses for a short window per browser tab, and drop the whole cache on
-// any write or on login/logout so no stale or cross-account data can show.
-const CACHE_TTL_MS = 20_000
+// from the backend by default, which is slow on a free-tier host. Stale-
+// while-revalidate: a page that has loaded once renders instantly from cache
+// on every later visit in this tab, while a fresh copy is fetched silently
+// in the background for the visit after that. Any write, login, logout, or
+// 401 drops the whole cache so results can't go stale across a mutation or
+// leak between the demo accounts in the same tab.
+const FRESH_MS = 20_000
 const cache = new Map()
 const rawGet = axiosClient.get.bind(axiosClient)
+
+function revalidate(key, url, config) {
+  rawGet(url, config)
+    .then((response) => cache.set(key, { response, promise: Promise.resolve(response), fetchedAt: Date.now() }))
+    .catch(() => {
+      // Keep serving the stale entry; the next visit will just try again.
+    })
+}
 
 axiosClient.get = (url, config = {}) => {
   if (config.cache === false) return rawGet(url, config)
   const key = `${url}?${JSON.stringify(config.params || {})}`
   const hit = cache.get(key)
-  if (hit && hit.expiresAt > Date.now()) return hit.promise
+
+  if (hit) {
+    if (Date.now() - hit.fetchedAt > FRESH_MS) revalidate(key, url, config)
+    return hit.promise
+  }
 
   const promise = rawGet(url, config).catch((error) => {
     cache.delete(key)
     throw error
   })
-  cache.set(key, { promise, expiresAt: Date.now() + CACHE_TTL_MS })
+  promise.then((response) => cache.set(key, { response, promise, fetchedAt: Date.now() }))
   return promise
 }
 
