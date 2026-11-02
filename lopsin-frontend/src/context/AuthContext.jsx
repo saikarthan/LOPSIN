@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { login as loginApi, registerOrganization as registerApi } from '../api'
+import { clearApiCache } from '../api/axiosClient'
 
 const AuthContext = createContext(null)
 
@@ -46,6 +47,7 @@ export function AuthProvider({ children }) {
   }
 
   const logout = () => {
+    clearApiCache()
     localStorage.removeItem('lopsin_token')
     localStorage.removeItem('lopsin_user')
     setUser(null)
