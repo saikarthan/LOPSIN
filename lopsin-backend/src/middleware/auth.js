@@ -2,6 +2,10 @@ import { verifyToken } from '../utils/crypto.js'
 import { collection, COLLECTIONS } from '../db/index.js'
 import { sha256 } from '../utils/ids.js'
 import { ApiError } from './errorHandler.js'
+import { cached } from '../utils/cache.js'
+
+const USER_CACHE_TTL_MS = 20_000
+const AGENT_CACHE_TTL_MS = 20_000
 
 function bearer(req) {
   const header = req.headers.authorization || ''
@@ -16,7 +20,9 @@ export async function requireUser(req, _res, next) {
     const payload = verifyToken(token)
     if (!payload || payload.typ !== 'session') throw new ApiError(401, 'Session expired, please sign in again')
 
-    const user = await collection(COLLECTIONS.users).findOne({ id: payload.sub })
+    const user = await cached(`user:${payload.sub}`, USER_CACHE_TTL_MS, () =>
+      collection(COLLECTIONS.users).findOne({ id: payload.sub })
+    )
     if (!user || user.status !== 'ACTIVE') throw new ApiError(401, 'Account is no longer active')
 
     req.user = {
@@ -49,7 +55,10 @@ export async function requireAgent(req, _res, next) {
     const token = bearer(req)
     if (!token) throw new ApiError(401, 'Agent credential required')
 
-    const agent = await collection(COLLECTIONS.agents).findOne({ secretHash: sha256(token) })
+    const secretHash = sha256(token)
+    const agent = await cached(`agent:${secretHash}`, AGENT_CACHE_TTL_MS, () =>
+      collection(COLLECTIONS.agents).findOne({ secretHash })
+    )
     if (!agent) throw new ApiError(401, 'Unknown or revoked agent credential')
     if (agent.status === 'REVOKED') throw new ApiError(403, 'This agent credential has been revoked')
 

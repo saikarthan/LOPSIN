@@ -5,6 +5,7 @@ import { ApiError, asyncRoute } from '../middleware/errorHandler.js'
 import { hashPassword } from '../utils/crypto.js'
 import { newId, nowIso } from '../utils/ids.js'
 import { recordAudit } from '../utils/audit.js'
+import { invalidate } from '../utils/cache.js'
 
 const router = Router()
 
@@ -105,6 +106,7 @@ router.put(
     }
 
     await collection(COLLECTIONS.users).updateOne({ id: user.id }, { $set: update })
+    invalidate(`user:${user.id}`)
     await recordAudit({
       orgId: req.user.orgId,
       actor: req.user.email,
@@ -127,6 +129,7 @@ router.delete(
     if (req.params.id === req.user.id) throw new ApiError(400, 'You cannot delete your own account')
     const result = await collection(COLLECTIONS.users).deleteOne({ id: req.params.id, orgId: req.user.orgId })
     if (!result.deletedCount) throw new ApiError(404, 'User not found')
+    invalidate(`user:${req.params.id}`)
     await recordAudit({
       orgId: req.user.orgId,
       actor: req.user.email,

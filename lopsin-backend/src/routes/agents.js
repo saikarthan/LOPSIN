@@ -5,6 +5,7 @@ import { newId, nowIso, sha256 } from '../utils/ids.js'
 import { ApiError, asyncRoute } from '../middleware/errorHandler.js'
 import { requireUser, requireRole } from '../middleware/auth.js'
 import { recordAudit } from '../utils/audit.js'
+import { invalidate } from '../utils/cache.js'
 
 const router = Router()
 
@@ -113,6 +114,7 @@ router.post(
       { id: agent.id },
       { $set: { secretHash: sha256(secret), status: 'ENROLLED', rotatedAt: nowIso() } }
     )
+    invalidate(`agent:${agent.secretHash}`)
     await recordAudit({
       orgId: req.user.orgId,
       actor: req.user.email,
@@ -133,6 +135,7 @@ router.post(
     if (!agent) throw new ApiError(404, 'Agent not found')
 
     await collection(COLLECTIONS.agents).updateOne({ id: agent.id }, { $set: { status: 'REVOKED' } })
+    invalidate(`agent:${agent.secretHash}`)
     await recordAudit({
       orgId: req.user.orgId,
       actor: req.user.email,
